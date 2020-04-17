@@ -1,0 +1,3 @@
+ipa_servername: 
+ipa_serverip: 
+ipa_serverurl: "https://{{ ipa_servername }}/ipa/config/ca.crt"

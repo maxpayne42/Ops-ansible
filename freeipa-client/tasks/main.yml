@@ -1,0 +1,42 @@
+- name: Install client
+  yum:
+    name: ipa-client
+    state: present
+
+- name: Set up FQDN
+  hostname:
+    name: "{{ ipa_clientname }}"
+
+- name: Resolove domain
+  shell: ping -c 2  "{{ ipa_servername }}"
+  register: result
+  ignore_errors: True
+
+- name: Add hosts  Record
+  shell: echo "{{ ipa_serverip }}  {{ ipa_servername }}" >> /etc/hosts
+  when:  result is failed
+
+- name: Add ipa host
+  ipa_host:
+    name: "{{ ipa_clientname }}"
+    ip_address: "{{ inventory_hostname }}"
+    state: present
+    ipa_host: "{{ ipa_servername }}"
+    ipa_user: admin
+    validate_certs: False
+    ipa_pass: "{{ secret }}"
+    random_password: True
+    ipa_port: 443
+  delegate_to: 127.0.0.1
+  register: dic_content
+
+- name: Download ca
+  get_url:
+    url: "{{ ipa_serverurl }}"
+    dest: /etc/ipa/ca.crt
+    validate_certs: false
+
+
+- name: Set up ipa client
+  shell: ipa-client-install --domain="{{  ipa_servername | regex_search('[a-zA-Z0-9]+\.[a-zA-Z0-9]+$') }}"  --server="{{ ipa_servername }}" --mkhomedir --unattended  -w  "{{ dic_content.host.randompassword }}" --ca-cert-file=/etc/ipa/ca.crt
+
